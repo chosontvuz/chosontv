@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useContentLanguage } from '../../context/ContentLanguageContext';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 import './TrillerCart.css';
 
@@ -16,21 +17,16 @@ const TrillerCart = ({ item, onClick, isDataLoading = false }) => {
   const name = getLocalized(item?.name, contentLang);
   const description = getLocalized(item?.description, contentLang);
   const imgSrc = item?.img ? encodeURI(item.img) : '';
-  const [isImageLoaded, setIsImageLoaded] = useState(!imgSrc);
+  const imageEnabled = Boolean(imgSrc) && !isDataLoading;
+  const { imgRef, showLoading: imageLoading, onLoad, markLoaded } = useImageLoadState(imgSrc, {
+    enabled: imageEnabled,
+  });
 
-  useEffect(() => {
-    setIsImageLoaded(!imgSrc);
-  }, [imgSrc]);
-
-  const showLoading = isDataLoading || (imgSrc ? !isImageLoaded : false);
-
-  const handleImageLoad = () => {
-    setIsImageLoaded(true);
-  };
+  const showLoading = isDataLoading || imageLoading;
 
   const handleImageError = (event) => {
     event.currentTarget.classList.add('triller-cart-img--empty');
-    setIsImageLoaded(true);
+    markLoaded();
   };
 
   return (
@@ -45,13 +41,14 @@ const TrillerCart = ({ item, onClick, isDataLoading = false }) => {
         {showLoading && (
           <LoaderSkeleton variant="image" className="triller-cart-media-skeleton" />
         )}
-        {imgSrc && !isDataLoading ? (
+        {imageEnabled ? (
           <img
+            ref={imgRef}
             src={imgSrc}
             alt={name || 'Triller'}
             className={`triller-cart-img ${showLoading ? 'is-loading' : ''}`}
             loading="lazy"
-            onLoad={handleImageLoad}
+            onLoad={onLoad}
             onError={handleImageError}
           />
         ) : null}

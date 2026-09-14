@@ -5,10 +5,12 @@ import { useLoading } from '../../context/LoadingContext';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 import { fetchActiveBanners } from '../../api/bannerApi';
 import { normalizeImagePath } from '../../utils/utils';
+import { useCachedImageLoadReport } from '../../hooks/useImageLoadState';
 import './Banner.css';
 
-const BannerSlideImage = ({ src, alt, showSkeleton, onImageLoad }) => {
+const BannerSlideImage = ({ src, alt, showSkeleton, onImageLoad, resetKey }) => {
     const normalizedSrc = normalizeImagePath(src);
+    const imgRef = useCachedImageLoadReport(normalizedSrc, onImageLoad, resetKey);
 
     return (
         <>
@@ -16,6 +18,7 @@ const BannerSlideImage = ({ src, alt, showSkeleton, onImageLoad }) => {
                 <LoaderSkeleton variant="banner-image" className="manga-image-skeleton" />
             )}
             <img
+                ref={imgRef}
                 src={normalizedSrc}
                 alt={alt}
                 draggable={false}
@@ -34,8 +37,9 @@ const BannerSlideImage = ({ src, alt, showSkeleton, onImageLoad }) => {
     );
 };
 
-const BannerTitleImage = ({ src, showSkeleton, onImageLoad }) => {
+const BannerTitleImage = ({ src, showSkeleton, onImageLoad, resetKey }) => {
     const normalizedSrc = normalizeImagePath(src);
+    const imgRef = useCachedImageLoadReport(normalizedSrc, onImageLoad, resetKey);
 
     return (
         <div className="manga-title-img-wrapper">
@@ -43,6 +47,7 @@ const BannerTitleImage = ({ src, showSkeleton, onImageLoad }) => {
                 <LoaderSkeleton variant="text" className="manga-title-img-skeleton" width="100%" height={120} />
             )}
             <img
+                ref={imgRef}
                 className={`manga-title-img ${showSkeleton ? 'is-loading' : ''}`}
                 src={normalizedSrc}
                 alt=""
@@ -58,6 +63,29 @@ const BannerTitleImage = ({ src, showSkeleton, onImageLoad }) => {
                 }}
             />
         </div>
+    );
+};
+
+const BannerTitlePreloadImage = ({ src, onImageLoad, resetKey }) => {
+    const imgRef = useCachedImageLoadReport(src, onImageLoad, resetKey);
+
+    return (
+        <img
+            ref={imgRef}
+            src={src}
+            alt=""
+            aria-hidden="true"
+            className="manga-title-img-preload"
+            onLoad={() => onImageLoad(src)}
+            onError={(e) => {
+                const fallbackSrc = normalizeImagePath('/img/no-image.png');
+                if (e.currentTarget.src !== fallbackSrc) {
+                    e.currentTarget.src = fallbackSrc;
+                    return;
+                }
+                onImageLoad(src);
+            }}
+        />
     );
 };
 
@@ -130,9 +158,14 @@ const Banner = () => {
         [images]
     );
 
-    useEffect(() => {
+    const prevImageSrcKeyRef = useRef(imageSrcKey);
+
+    // imageSrcKey o'zgaganda Set'ni effect'da emas, renderda tozalash —
+    // aks holda child complete-check effect Set'ga qo'shadi, keyin parent effect tozalaydi → stuck.
+    if (prevImageSrcKeyRef.current !== imageSrcKey) {
+        prevImageSrcKeyRef.current = imageSrcKey;
         setLoadedImageUrls(new Set());
-    }, [imageSrcKey]);
+    }
 
     const handleImageLoaded = useCallback((src) => {
         setLoadedImageUrls((prev) => {
@@ -457,23 +490,14 @@ const Banner = () => {
                 alt={`Banner ${index + 1}`}
                 showSkeleton={showMainSkeleton}
                 onImageLoad={handleImageLoaded}
+                resetKey={imageSrcKey}
             />
 
             {isVisibleSlide && normalizedTitleSrc && !isActive && !isTitleLoaded && (
-                <img
+                <BannerTitlePreloadImage
                     src={normalizedTitleSrc}
-                    alt=""
-                    aria-hidden="true"
-                    className="manga-title-img-preload"
-                    onLoad={() => handleImageLoaded(normalizedTitleSrc)}
-                    onError={(e) => {
-                        const fallbackSrc = normalizeImagePath('/img/no-image.png');
-                        if (e.currentTarget.src !== fallbackSrc) {
-                            e.currentTarget.src = fallbackSrc;
-                            return;
-                        }
-                        handleImageLoaded(normalizedTitleSrc);
-                    }}
+                    onImageLoad={handleImageLoaded}
+                    resetKey={imageSrcKey}
                 />
             )}
 
@@ -484,6 +508,7 @@ const Banner = () => {
                             src={image.titleImg}
                             showSkeleton={!isTitleLoaded}
                             onImageLoad={handleImageLoaded}
+                            resetKey={imageSrcKey}
                         />
                     )}
                     {showContentDetails && image.description && (

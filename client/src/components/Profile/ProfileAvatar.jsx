@@ -1,16 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 
 const ProfileAvatar = ({ src, ariaLabel }) => {
   const normalizedSrc = src ? normalizeMediaUrl(src) : '';
-  const [isImageLoaded, setIsImageLoaded] = useState(!normalizedSrc);
-
-  useEffect(() => {
-    setIsImageLoaded(!normalizedSrc);
-  }, [normalizedSrc]);
-
-  const showLoading = normalizedSrc ? !isImageLoaded : false;
+  const { imgRef, showLoading, onLoad, onError } = useImageLoadState(normalizedSrc);
 
   return (
     <div
@@ -22,11 +17,12 @@ const ProfileAvatar = ({ src, ariaLabel }) => {
       ) : null}
       {normalizedSrc ? (
         <img
+          ref={imgRef}
           src={normalizedSrc}
           alt=""
           className={`profile-avatar-img${showLoading ? ' is-loading' : ''}`}
-          onLoad={() => setIsImageLoaded(true)}
-          onError={() => setIsImageLoaded(true)}
+          onLoad={onLoad}
+          onError={onError}
         />
       ) : (
         <svg

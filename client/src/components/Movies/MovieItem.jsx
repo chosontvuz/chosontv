@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWishlist } from '../../context/WishlistContext';
 import { useContentLanguage } from '../../context/ContentLanguageContext';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
 import { getMovieAgeRestriction } from '../../utils/utils';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 
 const getMovieTitle = (movie, contentLang) => {
@@ -37,13 +38,12 @@ const MovieItem = ({
       ? movie.homeImg[contentLang] || movie.homeImg.uz || movie.homeImg.ru
       : ''
   );
-  const [isImageLoaded, setIsImageLoaded] = useState(!imgSrc);
+  const imageEnabled = Boolean(imgSrc) && !isDataLoading;
+  const { imgRef, showLoading: imageLoading, onLoad, onError } = useImageLoadState(imgSrc, {
+    enabled: imageEnabled,
+  });
 
-  useEffect(() => {
-    setIsImageLoaded(!imgSrc);
-  }, [imgSrc]);
-
-  const showLoading = isDataLoading || (imgSrc ? !isImageLoaded : false);
+  const showLoading = isDataLoading || imageLoading;
   const imdbRating = getImdbRating(movie);
   const ageRestriction = getMovieAgeRestriction(movie);
 
@@ -54,14 +54,15 @@ const MovieItem = ({
     >
       <div className="movies-item-image-wrapper">
         {showLoading && <LoaderSkeleton variant="image" />}
-        {imgSrc && !isDataLoading ? (
+        {imageEnabled ? (
           <img
+            ref={imgRef}
             src={imgSrc}
             alt={title}
             className={`movies-item-image ${showLoading ? 'is-loading' : ''}`}
             loading="lazy"
-            onLoad={() => setIsImageLoaded(true)}
-            onError={() => setIsImageLoaded(true)}
+            onLoad={onLoad}
+            onError={onError}
           />
         ) : null}
         {!showLoading && (

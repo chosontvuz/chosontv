@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 
 const getLocalized = (value, lang) => {
@@ -13,13 +14,7 @@ const TrillerModalListItem = ({ row, isActive, contentLang, onSelect }) => {
   const rowName = getLocalized(row?.name, contentLang);
   const rowDesc = getLocalized(row?.description, contentLang);
   const imgSrc = row?.img ? encodeURI(row.img) : '';
-  const [isImageLoaded, setIsImageLoaded] = useState(!imgSrc);
-
-  useEffect(() => {
-    setIsImageLoaded(!imgSrc);
-  }, [imgSrc]);
-
-  const showLoading = imgSrc ? !isImageLoaded : false;
+  const { imgRef, showLoading, onLoad, onError } = useImageLoadState(imgSrc);
 
   return (
     <button
@@ -40,12 +35,13 @@ const TrillerModalListItem = ({ row, isActive, contentLang, onSelect }) => {
         ) : null}
         {imgSrc ? (
           <img
+            ref={imgRef}
             src={imgSrc}
             alt={rowName || ''}
             loading="lazy"
             className={showLoading ? 'is-loading' : ''}
-            onLoad={() => setIsImageLoaded(true)}
-            onError={() => setIsImageLoaded(true)}
+            onLoad={onLoad}
+            onError={onError}
           />
         ) : (
           <span className="triller-modal-list-thumb-empty" />

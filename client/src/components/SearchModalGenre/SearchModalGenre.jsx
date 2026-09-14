@@ -1,25 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import HorizontalScroll from '../HorizontalScroll/HorizontalScroll';
 import { fetchGenres } from '../../api/genresApi';
 import { useContentLanguage } from '../../context/ContentLanguageContext';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 import './SearchModalGenre.css';
 
 const GenreItem = ({ genre, title, onClick }) => {
-  const imgRef = useRef(null);
-  const [imageLoading, setImageLoading] = useState(Boolean(genre?.img));
-
-  useEffect(() => {
-    const hasImage = Boolean(genre?.img);
-    setImageLoading(hasImage);
-
-    const img = imgRef.current;
-    if (hasImage && img?.complete && img.naturalWidth > 0) {
-      setImageLoading(false);
-    }
-  }, [genre?.img]);
+  const imgSrc = genre?.img || '';
+  const { imgRef, showLoading: imageLoading, onLoad, onError } = useImageLoadState(imgSrc);
 
   return (
     <div
@@ -41,14 +32,16 @@ const GenreItem = ({ genre, title, onClick }) => {
             className="search-modal-genre-item-image-skeleton"
           />
         )}
-        <img
-          ref={imgRef}
-          src={genre.img}
-          alt={title}
-          className={`search-modal-genre-item-image ${imageLoading ? 'is-loading' : ''}`}
-          onLoad={() => setImageLoading(false)}
-          onError={() => setImageLoading(false)}
-        />
+        {imgSrc ? (
+          <img
+            ref={imgRef}
+            src={imgSrc}
+            alt={title}
+            className={`search-modal-genre-item-image ${imageLoading ? 'is-loading' : ''}`}
+            onLoad={onLoad}
+            onError={onError}
+          />
+        ) : null}
         {imageLoading ? (
           <div className="search-modal-genre-item-title-slot" aria-hidden="true">
             <LoaderSkeleton

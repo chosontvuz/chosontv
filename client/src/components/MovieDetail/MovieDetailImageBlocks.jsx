@@ -1,30 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 
-const useImageLoadState = (src) => {
-  const normalizedSrc = src ? normalizeMediaUrl(src) : '';
-  const [isLoaded, setIsLoaded] = useState(!normalizedSrc);
-
-  useEffect(() => {
-    setIsLoaded(!normalizedSrc);
-  }, [normalizedSrc]);
-
-  const showLoading = normalizedSrc ? !isLoaded : false;
-
-  const handleLoad = () => setIsLoaded(true);
-  const handleError = () => setIsLoaded(true);
-
-  return {
-    normalizedSrc,
-    showLoading,
-    handleLoad,
-    handleError,
-  };
-};
-
 export const MovieDetailMediaImage = ({ src, alt }) => {
-  const { normalizedSrc, showLoading, handleLoad, handleError } = useImageLoadState(src);
+  const normalizedSrc = src ? normalizeMediaUrl(src) : '';
+  const { imgRef, showLoading, onLoad, onError } = useImageLoadState(normalizedSrc);
 
   if (!normalizedSrc) {
     return (
@@ -40,18 +21,20 @@ export const MovieDetailMediaImage = ({ src, alt }) => {
         <LoaderSkeleton variant="detail-image" className="movie-detail-video-skeleton" />
       ) : null}
       <img
+        ref={imgRef}
         src={normalizedSrc}
         alt={alt}
         className={`movie-detail-video${showLoading ? ' is-loading' : ''}`}
-        onLoad={handleLoad}
-        onError={handleError}
+        onLoad={onLoad}
+        onError={onError}
       />
     </div>
   );
 };
 
 export const MovieDetailTitleImage = ({ src, alt, srTitle }) => {
-  const { normalizedSrc, showLoading, handleLoad, handleError } = useImageLoadState(src);
+  const normalizedSrc = src ? normalizeMediaUrl(src) : '';
+  const { imgRef, showLoading, onLoad, onError } = useImageLoadState(normalizedSrc);
 
   if (!normalizedSrc) {
     return null;
@@ -65,11 +48,12 @@ export const MovieDetailTitleImage = ({ src, alt, srTitle }) => {
         </div>
       ) : null}
       <img
+        ref={imgRef}
         src={normalizedSrc}
         alt={alt}
         className={`movie-detail-title-img${showLoading ? ' is-loading' : ''}`}
-        onLoad={handleLoad}
-        onError={handleError}
+        onLoad={onLoad}
+        onError={onError}
       />
       {srTitle ? <h1 className="movie-detail-title movie-detail-title-sr-only">{srTitle}</h1> : null}
     </div>
@@ -79,7 +63,8 @@ export const MovieDetailTitleImage = ({ src, alt, srTitle }) => {
 export const MovieDetailActorItem = ({ actor, contentLang, onClick }) => {
   const name = actor?.name?.[contentLang] || actor?.name?.uz || actor?.name?.ru || '';
   const description = actor?.info?.[contentLang] || actor?.info?.uz || actor?.info?.ru || '';
-  const { normalizedSrc, showLoading, handleLoad, handleError } = useImageLoadState(actor?.image);
+  const normalizedSrc = actor?.image ? normalizeMediaUrl(actor.image) : '';
+  const { imgRef, showLoading, onLoad, onError } = useImageLoadState(normalizedSrc);
 
   return (
     <div
@@ -97,11 +82,12 @@ export const MovieDetailActorItem = ({ actor, contentLang, onClick }) => {
         ) : null}
         {normalizedSrc ? (
           <img
+            ref={imgRef}
             src={normalizedSrc}
             alt={name}
             className={showLoading ? 'is-loading' : ''}
-            onLoad={handleLoad}
-            onError={handleError}
+            onLoad={onLoad}
+            onError={onError}
           />
         ) : null}
       </div>

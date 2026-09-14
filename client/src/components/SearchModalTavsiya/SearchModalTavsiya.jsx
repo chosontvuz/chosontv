@@ -7,6 +7,7 @@ import { useMoviesCatalog } from '../../context/MoviesCatalogContext';
 import { fetchRecommendations } from '../../api/recommendationsApi';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
 import { getMovieAgeRestriction } from '../../utils/utils';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 import './SearchModalTavsiya.css';
 
@@ -26,13 +27,7 @@ const getImg = (movie, contentLang) => {
 
 const TavsiyaItem = ({ movie, contentLang, t, onClick }) => {
   const imgSrc = normalizeMediaUrl(getImg(movie, contentLang));
-  const [isImageLoaded, setIsImageLoaded] = useState(!imgSrc);
-
-  useEffect(() => {
-    setIsImageLoaded(!imgSrc);
-  }, [imgSrc]);
-
-  const showLoading = imgSrc ? !isImageLoaded : false;
+  const { imgRef, showLoading, onLoad, onError } = useImageLoadState(imgSrc);
   const ageRestriction = getMovieAgeRestriction(movie);
 
   return (
@@ -46,12 +41,13 @@ const TavsiyaItem = ({ movie, contentLang, t, onClick }) => {
         ) : null}
         {imgSrc ? (
           <img
+            ref={imgRef}
             src={imgSrc}
             alt={getTitle(movie, contentLang)}
             className={`search-modal-tavsiya-item-image${showLoading ? ' is-loading' : ''}`}
             loading="lazy"
-            onLoad={() => setIsImageLoaded(true)}
-            onError={() => setIsImageLoaded(true)}
+            onLoad={onLoad}
+            onError={onError}
           />
         ) : null}
         {!showLoading ? (

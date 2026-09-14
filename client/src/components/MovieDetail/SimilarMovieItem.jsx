@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWishlist } from '../../context/WishlistContext';
 import { useContentLanguage } from '../../context/ContentLanguageContext';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
 import { getMovieAgeRestriction } from '../../utils/utils';
+import { useImageLoadState } from '../../hooks/useImageLoadState';
 import LoaderSkeleton from '../LoaderSkeleton/LoaderSkeleton';
 
 const getMovieTitle = (movie, contentLang) => {
@@ -23,13 +24,7 @@ const SimilarMovieItem = ({ movie, onMovieClick }) => {
       ? movie.homeImg[contentLang] || movie.homeImg.uz || movie.homeImg.ru
       : ''
   );
-  const [isImageLoaded, setIsImageLoaded] = useState(!imgSrc);
-
-  useEffect(() => {
-    setIsImageLoaded(!imgSrc);
-  }, [imgSrc]);
-
-  const showLoading = imgSrc ? !isImageLoaded : false;
+  const { imgRef, showLoading, onLoad, onError } = useImageLoadState(imgSrc);
   const ageRestriction = getMovieAgeRestriction(movie);
 
   return (
@@ -46,12 +41,13 @@ const SimilarMovieItem = ({ movie, onMovieClick }) => {
         ) : null}
         {imgSrc ? (
           <img
+            ref={imgRef}
             src={imgSrc}
             alt={title}
             className={`similar-movies-item-image${showLoading ? ' is-loading' : ''}`}
             loading="lazy"
-            onLoad={() => setIsImageLoaded(true)}
-            onError={() => setIsImageLoaded(true)}
+            onLoad={onLoad}
+            onError={onError}
           />
         ) : null}
         {!showLoading ? (

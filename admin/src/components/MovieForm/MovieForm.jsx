@@ -106,6 +106,44 @@ const emptySeason = (seasonNumber = 1) => ({
   episodes: [{ uz: "", ru: "" }],
 });
 
+const normalizeCommaText = (text) =>
+  String(text || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+const parseNewlineGenres = (text) =>
+  String(text || "")
+    .split(/\r?\n/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+const genresToNewlineText = (list) =>
+  (Array.isArray(list) ? list : [])
+    .map((v) => String(v || "").trim())
+    .filter(Boolean)
+    .join("\n");
+
+const genresToCommaText = (list) =>
+  (Array.isArray(list) ? list : [])
+    .map((v) => String(v || "").trim())
+    .filter(Boolean)
+    .join(", ");
+
+/** Probel: oldida vergul yo‘q bo‘lsa avtomatik ", " */
+const insertAutoCommaOnSpace = (value, selectionStart, selectionEnd) => {
+  if (selectionStart !== selectionEnd) return null;
+  const before = String(value || "").slice(0, selectionStart);
+  const after = String(value || "").slice(selectionEnd);
+  if (!before.trim()) return null;
+  if (/,\s*$/.test(before)) return null;
+  const trimmedBefore = before.replace(/\s+$/, "");
+  return {
+    nextValue: `${trimmedBefore}, ${after}`,
+    nextCursor: trimmedBefore.length + 2,
+  };
+};
+
 function normalizeInitialMovie(data = {}) {
   const safeSeasons = Array.isArray(data.seasons) && data.seasons.length
     ? data.seasons.map((season, idx) => ({
@@ -234,6 +272,9 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
   const [typeCategoryOpen, setTypeCategoryOpen] = useState(false);
   const [categoryNameOpen, setCategoryNameOpen] = useState(false);
   const [uploadState, setUploadState] = useState({});
+  // Draft matn: har keystroke'da array→join qilinsa probel/vergul/Enter yo'qoladi
+  const [genreBadgeText, setGenreBadgeText] = useState({ uz: "", ru: "" });
+  const [genreDescText, setGenreDescText] = useState({ uz: "", ru: "" });
   const [form, setForm] = useState({
     movieId: "",
     movieCode: "",
@@ -277,7 +318,32 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
           fetchGenres(),
         ]);
         if (mode === "edit" && initialData) {
-          setForm((prev) => ({ ...prev, ...normalizeInitialMovie(initialData) }));
+          const normalized = normalizeInitialMovie(initialData);
+          setForm((prev) => ({ ...prev, ...normalized }));
+          const badgeUz =
+            normalized.genre?.uz?.length
+              ? normalized.genre.uz
+              : normalized.description?.uz?.genre || [];
+          const badgeRu =
+            normalized.genre?.ru?.length
+              ? normalized.genre.ru
+              : normalized.description?.ru?.genre || [];
+          const descUz =
+            normalized.description?.uz?.genre?.length
+              ? normalized.description.uz.genre
+              : badgeUz;
+          const descRu =
+            normalized.description?.ru?.genre?.length
+              ? normalized.description.ru.genre
+              : badgeRu;
+          setGenreBadgeText({
+            uz: genresToNewlineText(badgeUz),
+            ru: genresToNewlineText(badgeRu),
+          });
+          setGenreDescText({
+            uz: genresToCommaText(descUz),
+            ru: genresToCommaText(descRu),
+          });
         }
         setActors(actorRows);
 
@@ -433,17 +499,30 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
     return 0;
   };
 
-  const normalizeCommaText = (text) =>
-    String(text || "")
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean);
+  const patchBadgeGenres = (lang, text) => {
+    setGenreBadgeText((prev) => ({ ...prev, [lang]: text }));
+    setForm((prev) => ({
+      ...prev,
+      genre: {
+        ...prev.genre,
+        [lang]: parseNewlineGenres(text),
+      },
+    }));
+  };
 
-  const genresUzText =
-    (form.genre?.uz?.length ? form.genre.uz : form.description?.uz?.genre)?.join(", ") || "";
-  const genresRuText =
-    (form.genre?.ru?.length ? form.genre.ru : form.description?.ru?.genre)?.join(", ") || "";
-
+  const patchDescGenres = (lang, text) => {
+    setGenreDescText((prev) => ({ ...prev, [lang]: text }));
+    setForm((prev) => ({
+      ...prev,
+      description: {
+        ...prev.description,
+        [lang]: {
+          ...prev.description[lang],
+          genre: normalizeCommaText(text),
+        },
+      },
+    }));
+  };
   const renderUploadField = ({ keyName, label, help, accept, onFile, previewUrl }) => {
     const upload = uploadState[keyName] || {};
     const selectedText = upload.fileName
@@ -499,6 +578,11 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
         ru: normalizeVideoSource(form.watchVideo?.ru),
       };
 
+      const genreUz = parseNewlineGenres(genreBadgeText.uz);
+      const genreRu = parseNewlineGenres(genreBadgeText.ru);
+      const descGenreUz = normalizeCommaText(genreDescText.uz);
+      const descGenreRu = normalizeCommaText(genreDescText.ru);
+
       const payload = {
         movieCode: form.movieCode === "" ? undefined : toNumberOrDefault(form.movieCode, 0),
         title: form.title,
@@ -530,8 +614,17 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
         ageRestriction,
         categoryName,
         category: categoryName,
-        genre: form.genre,
-        description: form.description,
+        genre: { uz: genreUz, ru: genreRu },
+        description: {
+          uz: {
+            ...form.description.uz,
+            genre: descGenreUz.length ? descGenreUz : genreUz,
+          },
+          ru: {
+            ...form.description.ru,
+            genre: descGenreRu.length ? descGenreRu : genreRu,
+          },
+        },
         watchVideo,
         seasons: (form.seasons || []).map((season) => ({
           ...season,
@@ -818,7 +911,6 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
         <div className="movie-form__lang-grid">
           {["uz", "ru"].map((lang) => {
             const langTitle = lang === "uz" ? "O‘zbekcha" : "Ruscha";
-            const genreText = lang === "uz" ? genresUzText : genresRuText;
             return (
               <div className="movie-form__lang-col" key={lang}>
                 <h5 className="movie-form__lang-title">{langTitle}</h5>
@@ -902,26 +994,39 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
                   />
                 </Field>
                 <Field
-                  label="Saytda chiqadigan janrlar"
-                  help="Kino detail sahifasidagi “Janr:” yonidagi badge’lar. Vergul bilan yozing. Masalan: Drama, Triller, Jangari"
+                  label="Saytda chiqadigan janrlar (badge)"
+                  help="Detail sahifadagi “Janr:” badge’lari. Har bir janr — yangi qator (Enter). Vergul shart emas."
+                >
+                  <textarea
+                    className="movie-form__textarea"
+                    rows={3}
+                    value={genreBadgeText[lang] || ""}
+                    placeholder={"Komediya\nDrama\nTriller"}
+                    onChange={(e) => patchBadgeGenres(lang, e.target.value)}
+                  />
+                </Field>
+                <Field
+                  label="Tavsifdagi janrlar"
+                  help="Batafsil oynadagi Janr qatori. Format: Komediya, Drama. Vergul esdan chiqsa — probel avtomatik vergul qo‘yadi."
                 >
                   <input
                     className="movie-form__input"
-                    value={genreText}
-                    onChange={(e) => {
-                      const nextGenres = normalizeCommaText(e.target.value);
-                      patch({
-                        genre: {
-                          ...form.genre,
-                          [lang]: nextGenres,
-                        },
-                        description: {
-                          ...form.description,
-                          [lang]: {
-                            ...form.description[lang],
-                            genre: nextGenres,
-                          },
-                        },
+                    value={genreDescText[lang] || ""}
+                    placeholder="Komediya, Drama, Triller"
+                    onChange={(e) => patchDescGenres(lang, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== " ") return;
+                      const el = e.currentTarget;
+                      const result = insertAutoCommaOnSpace(
+                        el.value,
+                        el.selectionStart,
+                        el.selectionEnd
+                      );
+                      if (!result) return;
+                      e.preventDefault();
+                      patchDescGenres(lang, result.nextValue);
+                      requestAnimationFrame(() => {
+                        el.setSelectionRange(result.nextCursor, result.nextCursor);
                       });
                     }}
                   />

@@ -6,6 +6,11 @@ import { useAuthModal } from '../../context/AuthModalContext';
 import { getAuthToken } from '../../utils/authStorage';
 import { fetchActiveAd } from '../../api/adsApi';
 import { getVideoEmbed } from '../../utils/videoEmbed';
+import {
+  getFirstEpisodeUrl,
+  getMovieWatchSourceUrl,
+  isUsableVideoUrl,
+} from '../../utils/getWatchPlaybackUrl';
 import VideoLoader from '../VideoLoader/VideoLoader';
 import { pushTelegramOverlayClose, popTelegramOverlayClose, getTelegramWebApp } from '../TelegramBackButton/TelegramBackButton';
 import './WatchModal.css';
@@ -23,14 +28,14 @@ const WatchModal = ({ movie, videoUrl, onClose }) => {
     !videoUrl &&
     movie?.watchVideo &&
     typeof movie.watchVideo === 'object' &&
-    Boolean(movie.watchVideo.uz) &&
-    Boolean(movie.watchVideo.ru);
+    isUsableVideoUrl(movie.watchVideo.uz) &&
+    isUsableVideoUrl(movie.watchVideo.ru);
 
   const [watchVideoTrack, setWatchVideoTrack] = useState(() => {
     if (
       !videoUrl &&
-      movie?.watchVideo?.uz &&
-      movie?.watchVideo?.ru
+      isUsableVideoUrl(movie?.watchVideo?.uz) &&
+      isUsableVideoUrl(movie?.watchVideo?.ru)
     ) {
       return contentLang === 'ru' ? 'ru' : 'uz';
     }
@@ -40,23 +45,25 @@ const WatchModal = ({ movie, videoUrl, onClose }) => {
   // Faqat boshqa kino yoki videoUrl o'zgaganda boshlang'ich track; sahifa tili o'zgarsa modal ichidagi tanlov saqlanadi
   useEffect(() => {
     const wv = movie?.watchVideo;
-    if (!videoUrl && wv?.uz && wv?.ru) {
+    if (
+      !videoUrl &&
+      isUsableVideoUrl(wv?.uz) &&
+      isUsableVideoUrl(wv?.ru)
+    ) {
       setWatchVideoTrack(contentLang === 'ru' ? 'ru' : 'uz');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- contentLang bu yerda faqat yangi kino tanlanganda o'qiladi
   }, [movie?.id, videoUrl]);
 
   const getWatchVideo = () => {
-    if (videoUrl) return videoUrl;
-    if (movie.watchVideo && typeof movie.watchVideo === 'object') {
-      const wv = movie.watchVideo;
-      if (wv.uz && wv.ru) {
-        return wv[watchVideoTrack] || '';
-      }
-      return wv[contentLang] || wv.uz || wv.ru;
-    }
-    if (movie.watchUrl) return movie.watchUrl;
-    return '';
+    if (isUsableVideoUrl(videoUrl)) return String(videoUrl).trim();
+    const fromWatch = getMovieWatchSourceUrl(movie, {
+      lang: contentLang,
+      watchVideoTrack,
+    });
+    if (fromWatch) return fromWatch;
+    // Watch bo'sh: faqat 1-qisim (episodes[0]) — 2/3/4 fallback yo'q
+    return getFirstEpisodeUrl(movie, contentLang);
   };
 
   const watchSrc = getWatchVideo();
@@ -563,11 +570,11 @@ const WatchModal = ({ movie, videoUrl, onClose }) => {
       }
     }, 100);
     return () => clearInterval(checkDuration);
-  }, [movie.watchVideo, movie.watchUrl, videoUrl, contentLang, playbackSpeed, watchVideoTrack]);
+  }, [movie.watchVideo, movie.watchUrl, movie?.seasons, videoUrl, contentLang, playbackSpeed, watchVideoTrack]);
 
   useEffect(() => {
     setIsVideoBuffering(true);
-  }, [movie?.id, videoUrl, watchVideoTrack, contentLang]);
+  }, [movie?.id, videoUrl, watchVideoTrack, contentLang, movie?.seasons]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {

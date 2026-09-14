@@ -18,6 +18,10 @@ import { getAuthToken } from '../../utils/authStorage';
 import { useAuthModal } from '../../context/AuthModalContext';
 import { fetchMovieReaction, removeMovieReaction, setMovieReaction } from '../../api/userApi';
 import { getVideoEmbed, getYouTubeVideoId } from '../../utils/videoEmbed';
+import {
+  getFirstEpisodeUrl,
+  hasMovieWatchSource,
+} from '../../utils/getWatchPlaybackUrl';
 import './MovieDetail.css';
 
 const MovieSpecIcon = ({ type }) => {
@@ -655,15 +659,10 @@ const MovieDetail = () => {
     movie?.category === 'anonslar' ||
     movie?.categoryName === 'anons' ||
     (Array.isArray(movie?.typeCategory) && movie.typeCategory.includes('anonslar'));
-  const hasWatchVideo = Boolean(
-    (movie?.watchVideo && typeof movie.watchVideo === 'object'
-      ? movie.watchVideo.uz || movie.watchVideo.ru
-      : movie?.watchVideo) ||
-      movie?.watchUrl ||
-      movie?.videoUrl
-  );
-  // Anonsda tugma faqat qisqa video yuklangan bo'lsa ko'rinadi
-  const showWatchButton = !isAnonsMovie || hasWatchVideo;
+  const hasWatchVideo = hasMovieWatchSource(movie);
+  const hasEpisode1Fallback = Boolean(getFirstEpisodeUrl(movie, contentLang));
+  // Anonsda tugma faqat video (Watch yoki 1-qisim) bo'lsa; serialda Watch bo'sh bo'lsa ham Episode 1 yetarli
+  const showWatchButton = !isAnonsMovie || hasWatchVideo || hasEpisode1Fallback;
   const descriptionData = getDescriptionData();
   const isNewFormat = descriptionData !== null;
 
@@ -819,7 +818,15 @@ const MovieDetail = () => {
                   <button
                     className="movie-detail-btn movie-detail-btn-primary"
                     onClick={() => {
-                      setSelectedVideoUrl(null);
+                      // Watch bor → modal o'zi watchVideo/dual-track ochadi.
+                      // Watch bo'sh → faqat 1-qisim (episodes[0]), 2/3/4 emas.
+                      if (hasWatchVideo) {
+                        setSelectedVideoUrl(null);
+                      } else {
+                        setSelectedVideoUrl(
+                          getFirstEpisodeUrl(movie, contentLang) || null
+                        );
+                      }
                       setShowWatchModal(true);
                     }}
                   >
