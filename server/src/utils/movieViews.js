@@ -80,13 +80,13 @@ const getWeeklyUniqueViewRows = async ({
   weekStart,
   weekEnd,
   minUniqueUsers = 2,
-  limit = 5,
+  limit = 10,
 } = {}) => {
   const range = weekStart && weekEnd
     ? { weekStart, weekEnd }
     : getCurrentWeekRange();
 
-  const safeLimit = Math.min(Math.max(1, Number(limit) || 5), 5);
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 10);
   const safeMin = Math.max(1, Number(minUniqueUsers) || 2);
 
   const rows = await User.aggregate([

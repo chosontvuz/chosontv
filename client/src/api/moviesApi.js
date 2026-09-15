@@ -164,8 +164,8 @@ export const fetchTopRatedMovies = async ({ page = 1, limit = 20 } = {}) => {
   }
 };
 
-/** Haftaning top 5 — max 5, Ko'proq sahifasi yo'q */
-export const WEEKLY_TOP_LIMIT = 5;
+/** Haftaning top 10 — max 10, Ko'proq sahifasi yo'q */
+export const WEEKLY_TOP_LIMIT = 10;
 
 export const fetchWeeklyTopMovies = async ({ limit = WEEKLY_TOP_LIMIT } = {}) => {
   const safeLimit = Math.min(Math.max(1, Number(limit) || WEEKLY_TOP_LIMIT), WEEKLY_TOP_LIMIT);

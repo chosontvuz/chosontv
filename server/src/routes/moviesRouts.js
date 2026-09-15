@@ -125,7 +125,7 @@ router.get("/weekly-top", async (req, res, next) => {
 
     const { items, meta } = await buildWeeklyTopMovies({ limit });
 
-    return success(res, items, "Haftaning top 5 filimi", 200, {
+    return success(res, items, "Haftaning top 10 filimi", 200, {
       ...meta,
       page: 1,
       limit,

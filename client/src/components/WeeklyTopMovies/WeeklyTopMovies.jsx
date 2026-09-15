@@ -60,7 +60,7 @@ const WeeklyTopMovies = () => {
         <div className="movies-content-wrapper">
           <HorizontalScroll>
             {isLoading
-              ? Array.from({ length: 5 }).map((_, index) => (
+              ? Array.from({ length: WEEKLY_TOP_LIMIT }).map((_, index) => (
                   <div key={`weekly-top-ph-${index}`} className="weekly-top-item">
                     <span className="weekly-top-rank" aria-hidden="true">
                       <span className="weekly-top-rank-text" data-rank={index + 1}>{index + 1}</span>

@@ -2,7 +2,7 @@
  * Haftaning top filimi:
  * - kirish: joriy haftada kamida MIN_UNIQUE_USERS ta unique (login) user
  * - tartib: uniqueUsers DESC
- * - limit: MAX_WEEKLY_TOP (5)
+ * - limit: MAX_WEEKLY_TOP (10)
  * - yangilanish: har dushanba yangi hafta boshlanadi (yakshanba oxiri)
  */
 
@@ -14,7 +14,7 @@ const {
 const { resolveMovieNumericId } = require("./movieService");
 
 const MIN_UNIQUE_USERS = 1; // Kamida 1 ta login user ko‘rsa weekly topga chiqadi
-const MAX_WEEKLY_TOP = 5;
+const MAX_WEEKLY_TOP = 10;
 
 const toPublicMovie = (row) => {
   if (!row) return null;
