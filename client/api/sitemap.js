@@ -125,7 +125,7 @@ module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/xml; charset=utf-8");
   res.setHeader(
     "Cache-Control",
-    "public, s-maxage=1800, stale-while-revalidate=3600"
+    "public, s-maxage=300, stale-while-revalidate=600"
   );
   if (fetchError && movieEntries.length === 0) {
     res.setHeader("X-Sitemap-Warning", "movies-fetch-failed");

@@ -20,6 +20,7 @@ const {
   normalizeSeoLocalizedText,
   withSeoFields,
 } = require("../utils/seoFields");
+const { notifySitemapUpdate } = require("../utils/sitemapNotify");
 const { getNextMovieId, resolveMovieNumericId } = require("../services/movieService");
 
 const router = express.Router();
@@ -186,6 +187,7 @@ router.post("/", async (req, res, next) => {
         : [],
     });
 
+    notifySitemapUpdate(nextMovieId);
     return success(res, toApiMovie(created.toObject ? created.toObject() : created), "Kino yaratildi", 201);
   } catch (error) {
     return next(error);
@@ -236,6 +238,7 @@ router.put("/:id", async (req, res, next) => {
     if (!updated) {
       return fail(res, "Kino topilmadi.", 404);
     }
+    notifySitemapUpdate(movieId);
     return success(res, toApiMovie(updated), "Kino yangilandi.");
   } catch (error) {
     return next(error);
@@ -252,6 +255,7 @@ router.delete("/:id", async (req, res, next) => {
     if (!deleted) {
       return fail(res, "Kino topilmadi.", 404);
     }
+    notifySitemapUpdate(movieId);
     return success(res, null, "Kino o'chirildi.");
   } catch (error) {
     return next(error);

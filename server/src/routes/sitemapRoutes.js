@@ -79,7 +79,7 @@ router.get("/sitemap.xml", async (_req, res, next) => {
     ].join("\n");
 
     res.set("Content-Type", "application/xml; charset=utf-8");
-    res.set("Cache-Control", "public, max-age=1800");
+    res.set("Cache-Control", "public, max-age=300");
     return res.status(200).send(xml);
   } catch (error) {
     return next(error);
