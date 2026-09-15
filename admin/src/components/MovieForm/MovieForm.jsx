@@ -170,6 +170,14 @@ function normalizeInitialMovie(data = {}) {
       uz: data?.title?.uz || "",
       ru: data?.title?.ru || "",
     },
+    seoTitle: {
+      uz: data?.seoTitle?.uz || "",
+      ru: data?.seoTitle?.ru || "",
+    },
+    seoDescription: {
+      uz: data?.seoDescription?.uz || "",
+      ru: data?.seoDescription?.ru || "",
+    },
     titleImg: {
       uz: data?.titleImg?.uz || "",
       ru: data?.titleImg?.ru || "",
@@ -279,6 +287,8 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
     movieId: "",
     movieCode: "",
     title: { uz: "", ru: "" },
+    seoTitle: { uz: "", ru: "" },
+    seoDescription: { uz: "", ru: "" },
     titleImg: { uz: "", ru: "" },
     homeImg: { uz: "", ru: "" },
     movieMedia: {
@@ -586,6 +596,14 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
       const payload = {
         movieCode: form.movieCode === "" ? undefined : toNumberOrDefault(form.movieCode, 0),
         title: form.title,
+        seoTitle: {
+          uz: String(form.seoTitle?.uz || "").trim(),
+          ru: String(form.seoTitle?.ru || "").trim(),
+        },
+        seoDescription: {
+          uz: String(form.seoDescription?.uz || "").trim(),
+          ru: String(form.seoDescription?.ru || "").trim(),
+        },
         titleImg: {
           uz: normalizeMediaUrl(form.titleImg.uz),
           ru: normalizeMediaUrl(form.titleImg.ru),
@@ -733,6 +751,76 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
 
       <Block
         step="2"
+        title="SEO (Google)"
+        help="Ixtiyoriy. Bo‘sh qoldirilsa, oddiy kino nomi va tavsif ishlatiladi. Rasm Google uchun posterdan olinadi — alohida SEO rasm yo‘q."
+      >
+        <div className="movie-form__grid">
+          <Field
+            label="SEO title — o‘zbekcha"
+            help="Google’dagi ko‘k sarlavha. Qisqa yozing (tavsiya: ~60 belgi)."
+          >
+            <input
+              className="movie-form__input"
+              placeholder="Masalan: O'rgimchak odam: Uydan olisda"
+              value={form.seoTitle.uz}
+              onChange={(e) =>
+                patch({ seoTitle: { ...form.seoTitle, uz: e.target.value } })
+              }
+            />
+          </Field>
+
+          <Field
+            label="SEO title — ruscha"
+            help="Rus tilidagi qidiruv sarlavhasi (tavsiya: ~60 belgi)."
+          >
+            <input
+              className="movie-form__input"
+              placeholder="Masalan: Человек-паук: Вдали от дома"
+              value={form.seoTitle.ru}
+              onChange={(e) =>
+                patch({ seoTitle: { ...form.seoTitle, ru: e.target.value } })
+              }
+            />
+          </Field>
+
+          <Field
+            label="SEO description — o‘zbekcha"
+            help={`Google’dagi qisqa matn. Tavsiya: 150–160 belgi. Hozir: ${form.seoDescription.uz.length}`}
+          >
+            <textarea
+              className="movie-form__textarea"
+              rows={3}
+              placeholder="Kino haqida qisqa SEO tavsif (o‘zbekcha)"
+              value={form.seoDescription.uz}
+              onChange={(e) =>
+                patch({
+                  seoDescription: { ...form.seoDescription, uz: e.target.value },
+                })
+              }
+            />
+          </Field>
+
+          <Field
+            label="SEO description — ruscha"
+            help={`Ruscha SEO tavsif. Tavsiya: 150–160 belgi. Hozir: ${form.seoDescription.ru.length}`}
+          >
+            <textarea
+              className="movie-form__textarea"
+              rows={3}
+              placeholder="Краткое SEO-описание фильма"
+              value={form.seoDescription.ru}
+              onChange={(e) =>
+                patch({
+                  seoDescription: { ...form.seoDescription, ru: e.target.value },
+                })
+              }
+            />
+          </Field>
+        </div>
+      </Block>
+
+      <Block
+        step="3"
         title="Rasmlar"
         help="3 xil rasm: sarlavha logosi, ro‘yxat posteri va batafsil sahifa foni. Har biri uchun UZ va RU alohida."
       >
@@ -831,7 +919,7 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
       </Block>
 
       <Block
-        step="3"
+        step="4"
         title="Tomosha videosi"
         help={
           isAnons
@@ -904,7 +992,7 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
       </Block>
 
       <Block
-        step="4"
+        step="5"
         title="Tavsif va ma’lumotlar"
         help="Rejissyor, matn, yil, davlat, davomiylik va janrlar. UZ va RU alohida to‘ldiring."
       >
@@ -1038,7 +1126,7 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
       </Block>
 
       <Block
-        step="5"
+        step="6"
         title="Serial mavsumlari (ixtiyoriy)"
         help="Oddiy film uchun bo‘sh qoldirish mumkin. Serial bo‘lsa qismlarga Mover/YouTube havolasi yoki R2 video fayl qo‘ying — asosiy tomosha videosi kabi."
       >
@@ -1223,7 +1311,7 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
       </Block>
 
       <Block
-        step="6"
+        step="7"
         title="Bo‘lim va filtrlash"
         help="Kino qaysi bo‘limda chiqishi, qidiruv filtrlari, aktyorlar."
       >
@@ -1399,7 +1487,7 @@ export default function MovieForm({ onCancel, onSaved, mode = "create", initialD
       </Block>
 
       <Block
-        step="7"
+        step="8"
         title="Reyting va texnik ma’lumot"
         help="IMDb / Kinopoisk / Netflix ballari, yosh chegarasi va qo‘shimcha texnik maydonlar."
       >

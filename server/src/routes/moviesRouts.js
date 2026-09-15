@@ -16,17 +16,23 @@ const {
   normalizeLocalizedUrls,
   normalizeMovieMedia,
 } = require("../utils/mediaUrl");
+const {
+  normalizeSeoLocalizedText,
+  withSeoFields,
+} = require("../utils/seoFields");
 const { getNextMovieId, resolveMovieNumericId } = require("../services/movieService");
 
 const router = express.Router();
 
 const toApiMovie = ({ _id, movieId, createdAt, updatedAt, ...movie }) => {
   const id = resolveMovieNumericId({ movieId, id: movie.id });
-  return normalizeMovieMediaFields({
-    ...movie,
-    movieId: id,
-    id,
-  });
+  return withSeoFields(
+    normalizeMovieMediaFields({
+      ...movie,
+      movieId: id,
+      id,
+    })
+  );
 };
 
 const getOptionalUserId = async (req) => {
@@ -167,6 +173,8 @@ router.post("/", async (req, res, next) => {
       homeImg: normalizeLocalizedUrls(payload.homeImg),
       movieMedia: normalizeMovieMedia(payload.movieMedia),
       watchVideo,
+      seoTitle: normalizeSeoLocalizedText(payload.seoTitle),
+      seoDescription: normalizeSeoLocalizedText(payload.seoDescription),
       movieCode,
       ageRestriction,
       movieId: nextMovieId,
@@ -209,6 +217,12 @@ router.put("/:id", async (req, res, next) => {
     }
     if (body.movieMedia != null) {
       body.movieMedia = normalizeMovieMedia(body.movieMedia);
+    }
+    if (body.seoTitle != null) {
+      body.seoTitle = normalizeSeoLocalizedText(body.seoTitle);
+    }
+    if (body.seoDescription != null) {
+      body.seoDescription = normalizeSeoLocalizedText(body.seoDescription);
     }
     if (body.ageRestriction != null) {
       const age = Number(body.ageRestriction);

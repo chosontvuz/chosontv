@@ -80,12 +80,19 @@ app.get("/health", (req, res) => {
   "Server ishlayapti");
 });
 
+// Dinamik sitemap — static client/build/sitemap.xml dan OLDIN (ustunlik)
+app.use(require("./routes/sitemapRoutes"));
+
+// Google/botlar uchun /movie/:id HTML (SPA ni buzmasdan)
+const movieSeoPrerender = require("./middlewares/movieSeoPrerender");
+
 const clientBuildPath = process.env.CLIENT_BUILD_PATH
   ? path.resolve(process.env.CLIENT_BUILD_PATH)
   : path.join(__dirname, "../../client/build");
 
 if (fs.existsSync(clientBuildPath)) {
   app.use(express.static(clientBuildPath, { index: false }));
+  app.use(movieSeoPrerender);
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) {
       return fail(res, "Endpoint topilmadi", 404);
@@ -97,6 +104,9 @@ if (fs.existsSync(clientBuildPath)) {
       if (err) next(err);
     });
   });
+} else {
+  // Dev: build yo'q bo'lsa ham bot HTML ni tekshirish mumkin
+  app.use(movieSeoPrerender);
 }
 
 app.use(notFoundHandler);

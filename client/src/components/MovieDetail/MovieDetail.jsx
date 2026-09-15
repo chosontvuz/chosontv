@@ -22,6 +22,7 @@ import {
   getFirstEpisodeUrl,
   hasMovieWatchSource,
 } from '../../utils/getWatchPlaybackUrl';
+import { normalizeMediaUrl } from '../../utils/mediaUrl';
 import './MovieDetail.css';
 
 const MovieSpecIcon = ({ type }) => {
@@ -279,20 +280,48 @@ const MovieDetail = () => {
     }
   }, [showDescriptionModal]);
 
-  // SEO: title (movies.js), description, og:image, JSON-LD — Google uchun kuchaytirilgan
+  // SEO: seoTitle/seoDescription bo'lsa ular; aks holda oddiy nom/tavsif. Rasm — poster (homeImg).
   useEffect(() => {
     if (!movie) return;
     const lang = contentLang;
-    // movies.js title.uz / title.ru — to'g'ri ishlatiladi
-    const pageTitle = movie.title?.[lang] || movie.title?.uz || movie.title?.ru || '';
-    const descSource = movie.description?.[lang] || movie.description?.uz || movie.description?.ru || movie.description;
-    const pageDesc = typeof descSource === 'object' && descSource?.text ? descSource.text : (descSource || '');
-    const imgUrl = movie.titleImg?.[lang] || movie.titleImg?.uz || movie.titleImg?.ru
-      || movie.homeImg?.[lang] || movie.homeImg?.uz || movie.homeImg?.ru;
-    const fullImgUrl = imgUrl ? `${window.location.origin}${imgUrl}` : '';
+
+    const pickLocalized = (map) =>
+      (map && (map[lang] || map.uz || map.ru)) || '';
+
+    const fallbackTitle = pickLocalized(movie.title) || '';
+    const seoTitleRaw = String(pickLocalized(movie.seoTitle) || '').trim();
+    const pageTitle = seoTitleRaw || fallbackTitle;
+
+    const descSource =
+      movie.description?.[lang] ||
+      movie.description?.uz ||
+      movie.description?.ru ||
+      movie.description;
+    const fallbackDesc =
+      typeof descSource === 'object' && descSource?.text
+        ? descSource.text
+        : descSource || '';
+    const seoDescRaw = String(pickLocalized(movie.seoDescription) || '').trim();
+    const pageDesc = seoDescRaw || fallbackDesc || '';
+
+    // Google thumbnail: asosiy poster; bo'lmasa titleImg
+    const posterRaw =
+      movie.homeImg?.[lang] ||
+      movie.homeImg?.uz ||
+      movie.homeImg?.ru ||
+      movie.titleImg?.[lang] ||
+      movie.titleImg?.uz ||
+      movie.titleImg?.ru ||
+      '';
+    const imgUrl = normalizeMediaUrl(posterRaw);
+    const fullImgUrl = imgUrl
+      ? /^https?:\/\//i.test(imgUrl)
+        ? imgUrl
+        : `${window.location.origin}${imgUrl.startsWith('/') ? imgUrl : `/${imgUrl}`}`
+      : '';
     const canonicalUrl = `${window.location.origin}/movie/${movie.id}`;
     const genres = movie.genre?.[lang] || movie.genre?.uz || movie.genre?.ru || [];
-    const keywords = Array.isArray(genres) ? genres.join(', ') : (genres || '');
+    const keywords = Array.isArray(genres) ? genres.join(', ') : genres || '';
 
     const setMeta = (name, content, isProperty = false) => {
       const attr = isProperty ? 'property' : 'name';
@@ -315,14 +344,19 @@ const MovieDetail = () => {
       el.setAttribute('href', href);
     };
 
-    // Title — movies.js title.uz / title.ru
-    document.title = pageTitle ? `${pageTitle} | ChosonTV - Filmlar onlayn` : 'ChosonTV - Filmlar onlayn';
-    setMeta('description', pageDesc?.substring(0, 160) || '');
-    setMeta('keywords', `${pageTitle}, ${keywords}, film, kino, online, ChosonTV`.trim());
+    const shortDesc = String(pageDesc).substring(0, 160);
+    document.title = pageTitle
+      ? `${pageTitle} | ChosonTV - Filmlar onlayn`
+      : 'ChosonTV - Filmlar onlayn';
+    setMeta('description', shortDesc);
+    setMeta(
+      'keywords',
+      `${fallbackTitle || pageTitle}, ${keywords}, film, kino, online, ChosonTV`.trim()
+    );
 
     // Open Graph
     setMeta('og:title', pageTitle ? `${pageTitle} | ChosonTV` : 'ChosonTV', true);
-    setMeta('og:description', pageDesc?.substring(0, 160) || '', true);
+    setMeta('og:description', shortDesc, true);
     setMeta('og:image', fullImgUrl, true);
     setMeta('og:url', canonicalUrl, true);
     setMeta('og:type', 'video.movie', true);
@@ -333,24 +367,33 @@ const MovieDetail = () => {
     // Twitter Card
     setMeta('twitter:card', 'summary_large_image');
     setMeta('twitter:title', pageTitle ? `${pageTitle} | ChosonTV` : 'ChosonTV');
-    setMeta('twitter:description', pageDesc?.substring(0, 160) || '');
+    setMeta('twitter:description', shortDesc);
     setMeta('twitter:image', fullImgUrl);
 
     // Canonical URL
     setLink('canonical', canonicalUrl);
 
-    // JSON-LD — Google rich results (rejting, yil, aktyorlar)
-    const descData = movie.description?.[lang] || movie.description?.uz || movie.description?.ru;
-    const year = (typeof descData === 'object' && descData?.year) || movie.specs?.year;
+    // JSON-LD — Google rich results
+    const descData =
+      movie.description?.[lang] || movie.description?.uz || movie.description?.ru;
+    const year =
+      (typeof descData === 'object' && descData?.year) || movie.specs?.year;
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Movie',
       name: pageTitle,
-      description: pageDesc?.substring(0, 200) || '',
+      description: String(pageDesc).substring(0, 200) || '',
       image: fullImgUrl,
       datePublished: year ? `${year}-01-01` : undefined,
-      ...(movie.ratingImdb && { aggregateRating: { '@type': 'AggregateRating', ratingValue: movie.ratingImdb, bestRating: 10, worstRating: 0 } }),
-      ...(Array.isArray(genres) && genres.length && { genre: genres })
+      ...(movie.ratingImdb && {
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: movie.ratingImdb,
+          bestRating: 10,
+          worstRating: 0,
+        },
+      }),
+      ...(Array.isArray(genres) && genres.length && { genre: genres }),
     };
     let scriptEl = document.getElementById('movie-json-ld');
     if (scriptEl) scriptEl.remove();
