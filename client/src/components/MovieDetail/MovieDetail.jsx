@@ -22,7 +22,7 @@ import {
   getFirstEpisodeUrl,
   hasMovieWatchSource,
 } from '../../utils/getWatchPlaybackUrl';
-import { normalizeMediaUrl } from '../../utils/mediaUrl';
+import { toAbsoluteMediaUrl } from '../../utils/mediaUrl';
 import './MovieDetail.css';
 
 const MovieSpecIcon = ({ type }) => {
@@ -313,15 +313,17 @@ const MovieDetail = () => {
       movie.titleImg?.uz ||
       movie.titleImg?.ru ||
       '';
-    const imgUrl = normalizeMediaUrl(posterRaw);
-    const fullImgUrl = imgUrl
-      ? /^https?:\/\//i.test(imgUrl)
-        ? imgUrl
-        : `${window.location.origin}${imgUrl.startsWith('/') ? imgUrl : `/${imgUrl}`}`
-      : '';
+    const fullImgUrl = toAbsoluteMediaUrl(posterRaw, window.location.origin);
     const canonicalUrl = `${window.location.origin}/movie/${movie.id}`;
     const genres = movie.genre?.[lang] || movie.genre?.uz || movie.genre?.ru || [];
     const keywords = Array.isArray(genres) ? genres.join(', ') : genres || '';
+
+    const ratingValue = Number(movie.ratingImdb);
+    const likeN = parseInt(movie.like, 10) || 0;
+    const dislikeN = parseInt(movie.dislike, 10) || 0;
+    const ratingCount = likeN + dislikeN;
+    const hasAggregateRating =
+      Number.isFinite(ratingValue) && ratingValue > 0 && ratingCount > 0;
 
     const setMeta = (name, content, isProperty = false) => {
       const attr = isProperty ? 'property' : 'name';
@@ -385,10 +387,11 @@ const MovieDetail = () => {
       description: String(pageDesc).substring(0, 200) || '',
       image: fullImgUrl,
       datePublished: year ? `${year}-01-01` : undefined,
-      ...(movie.ratingImdb && {
+      ...(hasAggregateRating && {
         aggregateRating: {
           '@type': 'AggregateRating',
-          ratingValue: movie.ratingImdb,
+          ratingValue,
+          ratingCount,
           bestRating: 10,
           worstRating: 0,
         },

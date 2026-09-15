@@ -1,4 +1,4 @@
-const { normalizeMediaUrl } = require("./mediaUrl");
+const { toAbsoluteMediaUrl } = require("./mediaUrl");
 const { normalizeSeoLocalizedText } = require("./seoFields");
 const { getWebAppUrl } = require("../bot/webAppUrl");
 const { resolveMovieNumericId } = require("../services/movieService");
@@ -14,13 +14,6 @@ const escapeHtml = (value) =>
 const pickLocalized = (map, lang = "uz") => {
   if (!map || typeof map !== "object") return "";
   return String(map[lang] || map.uz || map.ru || "").trim();
-};
-
-const toAbsoluteUrl = (base, raw) => {
-  const normalized = normalizeMediaUrl(raw);
-  if (!normalized) return "";
-  if (/^https?:\/\//i.test(normalized)) return normalized;
-  return `${base}${normalized.startsWith("/") ? normalized : `/${normalized}`}`;
 };
 
 /**
@@ -55,7 +48,7 @@ function buildMovieSeoData(movie, { lang = "uz" } = {}) {
     movie?.titleImg?.uz ||
     movie?.titleImg?.ru ||
     "";
-  const image = toAbsoluteUrl(base, posterRaw);
+  const image = toAbsoluteMediaUrl(posterRaw, base);
   const canonicalUrl = id ? `${base}/movie/${id}` : base;
   const year =
     (typeof descSource === "object" && descSource?.year) ||
@@ -63,6 +56,13 @@ function buildMovieSeoData(movie, { lang = "uz" } = {}) {
     "";
   const genres =
     movie?.genre?.[lang] || movie?.genre?.uz || movie?.genre?.ru || [];
+
+  const ratingValue = Number(movie?.ratingImdb);
+  const likeN = parseInt(movie?.like, 10) || 0;
+  const dislikeN = parseInt(movie?.dislike, 10) || 0;
+  const ratingCount = likeN + dislikeN;
+  const hasAggregateRating =
+    Number.isFinite(ratingValue) && ratingValue > 0 && ratingCount > 0;
 
   return {
     id,
@@ -75,7 +75,8 @@ function buildMovieSeoData(movie, { lang = "uz" } = {}) {
     canonicalUrl,
     year,
     genres: Array.isArray(genres) ? genres : [],
-    ratingImdb: movie?.ratingImdb,
+    ratingImdb: hasAggregateRating ? ratingValue : undefined,
+    ratingCount: hasAggregateRating ? ratingCount : undefined,
   };
 }
 
@@ -95,11 +96,12 @@ function buildMovieSeoHtml(seo) {
     url: seo.canonicalUrl,
     ...(seo.image ? { image: seo.image } : {}),
     ...(seo.year ? { datePublished: `${seo.year}-01-01` } : {}),
-    ...(seo.ratingImdb
+    ...(seo.ratingImdb && seo.ratingCount
       ? {
           aggregateRating: {
             "@type": "AggregateRating",
             ratingValue: seo.ratingImdb,
+            ratingCount: seo.ratingCount,
             bestRating: 10,
             worstRating: 0,
           },

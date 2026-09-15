@@ -6,6 +6,10 @@ function normalizeMediaUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
 
+  if (raw.startsWith("//")) {
+    return `https:${raw}`;
+  }
+
   if (/^(https?:|data:|blob:)/i.test(raw)) {
     return raw;
   }
@@ -21,6 +25,29 @@ function normalizeMediaUrl(value) {
   }
 
   return raw;
+}
+
+/** SEO uchun absolyut URL — https bo'lsa origin qo'shilmaydi */
+function toAbsoluteMediaUrl(value, base = "") {
+  let url = normalizeMediaUrl(value);
+  if (!url) return "";
+
+  const httpsIdx = url.lastIndexOf("https://");
+  const httpIdx = url.lastIndexOf("http://");
+  const idx = Math.max(httpsIdx, httpIdx);
+  if (idx > 0) {
+    url = url.slice(idx);
+  }
+
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  const origin = String(base || "").replace(/\/+$/, "");
+  if (!origin) {
+    return url.startsWith("/") ? url : `/${url}`;
+  }
+  return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
 function normalizeLocalizedUrls(map) {
@@ -75,6 +102,7 @@ function normalizeMovieMediaFields(movie) {
 
 module.exports = {
   normalizeMediaUrl,
+  toAbsoluteMediaUrl,
   normalizeLocalizedUrls,
   normalizeMovieMedia,
   normalizeMovieMediaFields,
