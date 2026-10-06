@@ -2,8 +2,6 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next';
 import { useContentLanguage } from '../../context/ContentLanguageContext';
 import { useViewedMovies } from '../../context/ViewedMoviesContext';
-import { useAuthModal } from '../../context/AuthModalContext';
-import { getAuthToken } from '../../utils/authStorage';
 import { fetchActiveAd } from '../../api/adsApi';
 import { getVideoEmbed } from '../../utils/videoEmbed';
 import {
@@ -21,7 +19,6 @@ const WatchModal = ({ movie, videoUrl, onClose }) => {
   const { t } = useTranslation();
   const { contentLang } = useContentLanguage();
   const { addMovie } = useViewedMovies();
-  const { openAuthModal } = useAuthModal();
   const pendingMarkViewedRef = useRef(false);
 
   const dualWatchAvailable =
@@ -190,19 +187,12 @@ const WatchModal = ({ movie, videoUrl, onClose }) => {
     }, 100);
   };
 
-  const ensureAuthForPlay = () => {
-    if (getAuthToken()) return true;
-    openAuthModal();
-    return false;
-  };
-
   const handlePlayPause = () => {
     if (showAdOverlay) return;
     if (videoRef.current) {
       if (isPlayingRef.current) {
         videoRef.current.pause();
       } else {
-        if (!ensureAuthForPlay()) return;
         if (!hasUserStartedWatchingRef.current && activeAd?.isActive) {
           showAd();
           return;
@@ -222,7 +212,6 @@ const WatchModal = ({ movie, videoUrl, onClose }) => {
 
     // Mover/YouTube embed: mavjud play tugmasi orqali start + viewed
     if (isEmbedPlayer && !embedStarted) {
-      if (!ensureAuthForPlay()) return;
       pendingMarkViewedRef.current = true;
       setEmbedStarted(true);
       if (movie && pendingMarkViewedRef.current) {
@@ -234,7 +223,6 @@ const WatchModal = ({ movie, videoUrl, onClose }) => {
 
     const willStartPlayback = !isPlayingRef.current && !showAdOverlay;
     if (willStartPlayback) {
-      if (!ensureAuthForPlay()) return;
       pendingMarkViewedRef.current = true;
     }
     handlePlayPause();
